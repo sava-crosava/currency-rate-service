@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: currency-rate-service
+
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/currencydb
+    username: currency
+    password: currency
+
+  flyway:
+    enabled: true
+    url: jdbc:postgresql://localhost:5432/currencydb
+    user: currency
+    password: currency
+
+  sql:
+    init:
+      mode: never
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+rates:
+  fiat:
+    base-url: http://localhost:8080/fiat-currency-rates
+    api-key: secret-key
+  crypto:
+    base-url: http://localhost:8080/crypto-currency-rates
+  http:
+    timeout: 3s
