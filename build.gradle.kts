@@ -38,14 +38,14 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
 
-	testImplementation(platform("com.squareup.okhttp3:okhttp-bom"))
+	testImplementation(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
 	testImplementation("com.squareup.okhttp3:mockwebserver")
 
-	testImplementation(platform("org.testcontainers:testcontainers-bom"))
+	testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:postgresql")
 
-	testImplementation("org.wiremock:wiremock-standalone")
+	testImplementation("org.wiremock:wiremock-standalone:3.13.1")
 
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
