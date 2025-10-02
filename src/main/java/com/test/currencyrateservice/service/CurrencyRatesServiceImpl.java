@@ -5,12 +5,11 @@ import com.test.currencyrateservice.client.FiatRatesClient;
 import com.test.currencyrateservice.dto.CurrencyRatesResponse;
 import com.test.currencyrateservice.dto.RateItem;
 import com.test.currencyrateservice.entity.RateEntity;
+import com.test.currencyrateservice.entity.RateType;
 import com.test.currencyrateservice.mapper.RateMappers;
 import com.test.currencyrateservice.repository.RateRepository;
 import java.time.OffsetDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,59 +29,46 @@ public class CurrencyRatesServiceImpl implements CurrencyRatesService {
         OffsetDateTime now = OffsetDateTime.now();
         log.info("fetch_currency_rates start at={}", now);
 
-        Mono<List<RateItem>> fiatFlow =
-                fiatClient
-                        .getRates()
-                        .doOnSubscribe(s -> log.info("fetch_fiat request"))
-                        .map(list -> list.stream().map(dto -> RateMappers.toEntity(dto, now)).toList())
-                        .flatMap(entities -> saveAll(entities).then(Mono.just(entities)))
-                        .doOnNext(list -> log.info("fetch_fiat success size={}", list.size()))
-                        .map(list -> list.stream().map(RateMappers::toRateItem).toList())
-                        .onErrorResume(
-                                ex -> {
-                                    log.warn("fetch_fiat error fallback_db reason={}", ex.toString());
-                                    return rateRepository
-                                            .findByTypeOrderByFetchedAtDesc("FIAT")
-                                            .collectList()
-                                            .map(this::latestPerCurrency)
-                                            .doOnNext(list -> log.info("fallback_fiat_db size={}", list.size()));
-                                });
+        Mono<List<RateItem>> fiatFlow = fetchFlow(
+                fiatClient.getRates().map(list -> list.stream().map(dto -> RateMappers.toEntity(dto, now)).toList()),
+                RateType.FIAT,
+                "fiat"
+        );
 
-        Mono<List<RateItem>> cryptoFlow =
-                cryptoClient
-                        .getRates()
-                        .doOnSubscribe(s -> log.info("fetch_crypto request"))
-                        .map(list -> list.stream().map(dto -> RateMappers.toEntity(dto, now)).toList())
-                        .flatMap(entities -> saveAll(entities).then(Mono.just(entities)))
-                        .doOnNext(list -> log.info("fetch_crypto success size={}", list.size()))
-                        .map(list -> list.stream().map(RateMappers::toRateItem).toList())
-                        .onErrorResume(
-                                ex -> {
-                                    log.warn("fetch_crypto error fallback_db reason={}", ex.toString());
-                                    return rateRepository
-                                            .findByTypeOrderByFetchedAtDesc("CRYPTO")
-                                            .collectList()
-                                            .map(this::latestPerCurrency)
-                                            .doOnNext(list -> log.info("fallback_crypto_db size={}", list.size()));
-                                });
+        Mono<List<RateItem>> cryptoFlow = fetchFlow(
+                cryptoClient.getRates().map(list -> list.stream().map(dto -> RateMappers.toEntity(dto, now)).toList()),
+                RateType.CRYPTO,
+                "crypto"
+        );
 
         return Mono.zip(fiatFlow, cryptoFlow)
                 .map(t -> new CurrencyRatesResponse(t.getT1(), t.getT2()))
-                .doOnSuccess(r -> log.info("fetch_currency_rates done fiat={} crypto={}", r.fiat().size(), r.crypto().size()));
+                .doOnSuccess(r -> log.info("fetch_currency_rates done fiat={} crypto={}", r.fiat().size(), r.crypto().size()))
+                .onErrorReturn(new CurrencyRatesResponse(List.of(), List.of()));
+    }
+
+    private Mono<List<RateItem>> fetchFlow(Mono<List<RateEntity>> upstream, RateType type, String name) {
+        return upstream
+                .doOnSubscribe(s -> log.info("fetch_{} request", name))
+                .flatMap(entities -> saveAll(entities).then(Mono.just(entities)))
+                .doOnNext(list -> log.info("fetch_{} success size={}", name, list.size()))
+                .map(list -> list.stream().map(RateMappers::toRateItem).toList())
+                .onErrorResume(ex -> {
+                    log.warn("fetch_{} error fallback_db reason={}", name, ex.toString());
+                    return rateRepository
+                            .findLatestPerCurrencyByType(type)
+                            .map(RateMappers::toRateItem)
+                            .collectList()
+                            .doOnNext(list -> log.info("fallback_{}_db size={}", name, list.size()));
+                });
     }
 
     private Mono<Void> saveAll(List<RateEntity> entities) {
         if (entities.isEmpty()) return Mono.empty();
-        return rateRepository.saveAll(entities).doOnSubscribe(s -> log.debug("persist_rates size={}", entities.size())).then();
-    }
-
-    private List<RateItem> latestPerCurrency(List<RateEntity> sortedDesc) {
-        Map<String, RateItem> map = new LinkedHashMap<>();
-        for (RateEntity e : sortedDesc) {
-            if (!map.containsKey(e.getCurrency())) {
-                map.put(e.getCurrency(), RateMappers.toRateItem(e));
-            }
-        }
-        return List.copyOf(map.values());
+        return rateRepository
+                .saveAll(entities)
+                .count()
+                .doOnNext(c -> log.debug("persist_rates saved={}", c))
+                .then();
     }
 }

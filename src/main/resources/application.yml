@@ -20,6 +20,16 @@ spring:
 server:
   port: 8081
 
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.web.reactive.function.client: DEBUG
+    reactor.netty.http.client: INFO
+    org.springframework.r2dbc.core: DEBUG
+    io.r2dbc.postgresql.QUERY: DEBUG
+    io.r2dbc.postgresql.PARAM: DEBUG
+
 management:
   endpoints:
     web:
@@ -33,8 +43,11 @@ management:
 rates:
   fiat:
     base-url: http://localhost:8080/fiat-currency-rates
+    api-header: X-API-KEY
     api-key: secret-key
   crypto:
     base-url: http://localhost:8080/crypto-currency-rates
   http:
     timeout: 3s
+    max-in-memory-size: 1MB
+    wiretap-enabled: false

@@ -9,26 +9,22 @@ version = "0.0.1-SNAPSHOT"
 description = "Currency Rate Service test task"
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
+	toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
 
 configurations {
-	compileOnly {
-		extendsFrom(configurations.annotationProcessor.get())
-	}
+	compileOnly { extendsFrom(annotationProcessor.get()) }
 }
 
-repositories {
-	mavenCentral()
-}
+repositories { mavenCentral() }
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-webflux")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
 	implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
 	implementation("org.springframework.boot:spring-boot-starter-jdbc")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
+
 	implementation("org.flywaydb:flyway-core")
 	implementation("org.flywaydb:flyway-database-postgresql")
 
@@ -41,9 +37,17 @@ dependencies {
 
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("io.projectreactor:reactor-test")
+
+	testImplementation(platform("com.squareup.okhttp3:okhttp-bom"))
+	testImplementation("com.squareup.okhttp3:mockwebserver")
+
+	testImplementation(platform("org.testcontainers:testcontainers-bom"))
+	testImplementation("org.testcontainers:junit-jupiter")
+	testImplementation("org.testcontainers:postgresql")
+
+	testImplementation("org.wiremock:wiremock-standalone")
+
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
-tasks.withType<Test> {
-	useJUnitPlatform()
-}
+tasks.withType<Test> { useJUnitPlatform() }

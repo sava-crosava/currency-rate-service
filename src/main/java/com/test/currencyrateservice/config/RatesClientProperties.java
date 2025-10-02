@@ -6,6 +6,7 @@ import java.time.Duration;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
 @Getter
@@ -30,6 +31,8 @@ public class RatesClientProperties {
     private String baseUrl;
     @NotBlank
     private String apiKey;
+    @NotBlank
+    private String apiHeader = "X-API-KEY";
   }
 
   @Getter
@@ -44,5 +47,8 @@ public class RatesClientProperties {
   public static class Http {
     @NotNull
     private Duration timeout;
+    @NotNull
+    private DataSize maxInMemorySize = DataSize.ofMegabytes(1);
+    private boolean wiretapEnabled = false;
   }
 }
