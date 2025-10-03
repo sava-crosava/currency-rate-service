@@ -1,26 +1,27 @@
 package com.test.currencyrateservice.client;
 
-import com.test.currencyrateservice.client.model.FiatRateDto;
-import java.io.IOException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import okhttp3.mockwebserver.RecordedRequest;
+import com.test.currencyrateservice.client.model.FiatRateDto;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.test.StepVerifier;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.io.IOException;
 
 class FiatRatesClientTest {
 
   MockWebServer server;
+  FiatRatesClient client;
 
   @BeforeEach
   void setUp() throws IOException {
     server = new MockWebServer();
     server.start();
+    WebClient wc = WebClient.builder().baseUrl(server.url("/").toString()).build();
+    client = new FiatRatesClient(wc);
   }
 
   @AfterEach
@@ -29,23 +30,18 @@ class FiatRatesClientTest {
   }
 
   @Test
-  void sendsHeaderAndParsesResponse() throws Exception {
-    server.enqueue(new MockResponse()
-        .setBody("[{\"currency\":\"USD\",\"rate\":10.5},{\"currency\":\"EUR\",\"rate\":11.1}]")
-        .addHeader("Content-Type", "application/json"));
-
-    WebClient wc = WebClient.builder()
-        .baseUrl(server.url("/fiat-currency-rates").toString())
-        .defaultHeader("X-API-KEY", "secret-key")
-        .build();
-
-    FiatRatesClient client = new FiatRatesClient(wc);
-
-    StepVerifier.create(client.getRates())
-        .assertNext(list -> assertThat(list).extracting(FiatRateDto::currency).containsExactly("USD", "EUR"))
+  void ok_parsesFlux() {
+    server.enqueue(new MockResponse().setBody("[{\"currency\":\"USD\",\"rate\":1.1},{\"currency\":\"EUR\",\"rate\":2.2}]").addHeader("Content-Type","application/json"));
+    StepVerifier.create(client.getRates().map(FiatRateDto::currency))
+        .expectNext("USD","EUR")
         .verifyComplete();
+  }
 
-    RecordedRequest req = server.takeRequest();
-    assertThat(req.getHeader("X-API-KEY")).isEqualTo("secret-key");
+  @Test
+  void error_status_propagates() {
+    server.enqueue(new MockResponse().setResponseCode(500));
+    StepVerifier.create(client.getRates())
+        .expectError()
+        .verify();
   }
 }

@@ -31,6 +31,10 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 	runtimeOnly("org.postgresql:r2dbc-postgresql")
 
+	implementation("org.mapstruct:mapstruct:1.6.3")
+	annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
+	annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
+
 	compileOnly("org.projectlombok:lombok")
 	annotationProcessor("org.projectlombok:lombok")
 	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
@@ -42,10 +46,11 @@ dependencies {
 	testImplementation("com.squareup.okhttp3:mockwebserver")
 
 	testImplementation(platform("org.testcontainers:testcontainers-bom:1.21.3"))
+	testImplementation("org.springframework.boot:spring-boot-testcontainers")
 	testImplementation("org.testcontainers:junit-jupiter")
 	testImplementation("org.testcontainers:postgresql")
 
-	testImplementation("org.wiremock:wiremock-standalone:3.13.1")
+	testImplementation("org.mockito:mockito-junit-jupiter")
 
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }

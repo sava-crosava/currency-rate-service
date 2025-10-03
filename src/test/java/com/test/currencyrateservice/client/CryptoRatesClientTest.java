@@ -1,25 +1,25 @@
 package com.test.currencyrateservice.client;
 
-import com.test.currencyrateservice.client.model.CryptoRateDto;
-import java.io.IOException;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import com.test.currencyrateservice.client.model.CryptoRateDto;
+import org.junit.jupiter.api.*;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.test.StepVerifier;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.io.IOException;
 
 class CryptoRatesClientTest {
 
   MockWebServer server;
+  CryptoRatesClient client;
 
   @BeforeEach
   void setUp() throws IOException {
     server = new MockWebServer();
     server.start();
+    WebClient wc = WebClient.builder().baseUrl(server.url("/").toString()).build();
+    client = new CryptoRatesClient(wc);
   }
 
   @AfterEach
@@ -28,19 +28,18 @@ class CryptoRatesClientTest {
   }
 
   @Test
-  void parsesResponse() {
-    server.enqueue(new MockResponse()
-            .setBody("[{\"name\":\"BTC\",\"value\":1.0},{\"name\":\"ETH\",\"value\":2.0}]")
-            .addHeader("Content-Type", "application/json"));
+  void ok_parsesFlux() {
+    server.enqueue(new MockResponse().setBody("[{\"name\":\"BTC\",\"value\":100},{\"name\":\"ETH\",\"value\":200}]").addHeader("Content-Type","application/json"));
+    StepVerifier.create(client.getRates().map(CryptoRateDto::name))
+        .expectNext("BTC","ETH")
+        .verifyComplete();
+  }
 
-    WebClient wc = WebClient.builder()
-            .baseUrl(server.url("/crypto-currency-rates").toString())
-            .build();
-
-    CryptoRatesClient client = new CryptoRatesClient(wc);
-
+  @Test
+  void error_status_propagates() {
+    server.enqueue(new MockResponse().setResponseCode(502));
     StepVerifier.create(client.getRates())
-            .assertNext(list -> assertThat(list).extracting(CryptoRateDto::name).containsExactly("BTC", "ETH"))
-            .verifyComplete();
+        .expectError()
+        .verify();
   }
 }
