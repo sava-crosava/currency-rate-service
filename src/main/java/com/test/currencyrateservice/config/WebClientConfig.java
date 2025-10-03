@@ -24,14 +24,14 @@ public class WebClientConfig {
 
   @Bean
   WebClient.Builder commonWebClientBuilder() {
-    Duration timeout = props.getHttp().getTimeout();
+    Duration timeout = props.http().timeout();
     HttpClient httpClient = HttpClient.create()
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(timeout.toMillis()))
             .responseTimeout(timeout)
-            .wiretap(props.getHttp().isWiretapEnabled());
+            .wiretap(props.http().wiretapEnabled());
 
     ExchangeStrategies strategies = ExchangeStrategies.builder()
-            .codecs(c -> c.defaultCodecs().maxInMemorySize(Math.toIntExact(props.getHttp().getMaxInMemorySize().toBytes())))
+            .codecs(c -> c.defaultCodecs().maxInMemorySize(Math.toIntExact(props.http().maxInMemorySize().toBytes())))
             .build();
 
     return WebClient.builder()
@@ -46,15 +46,15 @@ public class WebClientConfig {
   @Bean("fiatWebClient")
   WebClient fiatWebClient(WebClient.Builder builder) {
     return builder
-            .baseUrl(props.getFiat().getBaseUrl())
-            .defaultHeader(props.getFiat().getApiHeader(), props.getFiat().getApiKey())
+            .baseUrl(props.fiat().baseUrl())
+            .defaultHeader(props.fiat().apiHeader(), props.fiat().apiKey())
             .build();
   }
 
   @Bean("cryptoWebClient")
   WebClient cryptoWebClient(WebClient.Builder builder) {
     return builder
-            .baseUrl(props.getCrypto().getBaseUrl())
+            .baseUrl(props.crypto().baseUrl())
             .build();
   }
 
@@ -70,7 +70,7 @@ public class WebClientConfig {
 
   private ExchangeFilterFunction logRequest() {
     return ExchangeFilterFunction.ofRequestProcessor(req -> {
-      boolean hasApiKey = req.headers().containsKey(props.getFiat().getApiHeader());
+      boolean hasApiKey = req.headers().containsKey(props.fiat().apiHeader());
       log.info("HTTP {} {} apiKey: {}", req.method(), req.url(), hasApiKey ? "***" : "absent");
       return Mono.just(req);
     });

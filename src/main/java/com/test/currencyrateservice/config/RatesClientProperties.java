@@ -1,54 +1,34 @@
 package com.test.currencyrateservice.config;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.Duration;
-import lombok.Getter;
-import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.util.unit.DataSize;
 import org.springframework.validation.annotation.Validated;
 
-@Getter
-@Setter
 @Validated
 @ConfigurationProperties(prefix = "rates")
-public class RatesClientProperties {
+public record RatesClientProperties(
+        @Valid @NotNull Fiat fiat,
+        @Valid @NotNull Crypto crypto,
+        @Valid @NotNull Http http
+) {
+  public record Fiat(
+          @NotBlank String baseUrl,
+          @NotBlank String apiKey,
+          @NotBlank String apiHeader
+  ) {}
 
-  @NotNull
-  private Fiat fiat;
+  public record Crypto(
+          @NotBlank String baseUrl
+  ) {}
 
-  @NotNull
-  private Crypto crypto;
-
-  @NotNull
-  private Http http;
-
-  @Getter
-  @Setter
-  public static class Fiat {
-    @NotBlank
-    private String baseUrl;
-    @NotBlank
-    private String apiKey;
-    @NotBlank
-    private String apiHeader = "X-API-KEY";
-  }
-
-  @Getter
-  @Setter
-  public static class Crypto {
-    @NotBlank
-    private String baseUrl;
-  }
-
-  @Getter
-  @Setter
-  public static class Http {
-    @NotNull
-    private Duration timeout;
-    @NotNull
-    private DataSize maxInMemorySize = DataSize.ofMegabytes(1);
-    private boolean wiretapEnabled = false;
-  }
+  public record Http(
+          @NotNull Duration timeout,
+          @NotNull @DefaultValue("1MB") DataSize maxInMemorySize,
+          @DefaultValue("false") boolean wiretapEnabled
+  ) {}
 }

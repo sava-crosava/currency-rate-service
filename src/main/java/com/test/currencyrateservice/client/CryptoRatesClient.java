@@ -1,33 +1,30 @@
 package com.test.currencyrateservice.client;
 
 import com.test.currencyrateservice.client.model.CryptoRateDto;
-import java.util.List;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.Flux;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class CryptoRatesClient {
 
-  private final WebClient webClient;
+    @Qualifier("cryptoWebClient")
+    private final WebClient webClient;
 
-  public CryptoRatesClient(@Qualifier("cryptoWebClient") WebClient webClient) {
-    this.webClient = webClient;
-  }
-
-  public Mono<List<CryptoRateDto>> getRates() {
+  public Flux<CryptoRateDto> getRates() {
     return webClient
             .get()
             .accept(MediaType.APPLICATION_JSON)
             .retrieve()
             .bodyToFlux(CryptoRateDto.class)
-            .collectList()
             .doOnSubscribe(s -> log.info("Fetching crypto rates"))
-            .doOnSuccess(list -> log.info("Fetched crypto rates: {}", list.size()))
+            .doOnNext(it -> log.debug("Crypto rate {}", it))
             .doOnError(e -> log.error("Crypto rates fetch failed", e));
   }
 }
